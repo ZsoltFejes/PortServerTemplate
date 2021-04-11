@@ -12,18 +12,19 @@ import (
 
 type ClientManager struct {
 	clients    map[*Client]bool
-	broadcast  chan []byte
+	broadcast  chan Command
 	register   chan *Client
 	unregister chan *Client
 }
 
 type Client struct {
 	socket net.Conn
-	data   chan []byte
+	data   chan Command
 }
 
 type Command struct {
-	Command string `json:"command"`
+	Command string `json:"command,omitempty"`
+	Status  string `json:"status,omitempty"`
 }
 
 // Start Client manager
@@ -54,54 +55,59 @@ func (manager *ClientManager) start() {
 
 // Handle receaved messages in server, needs to be assnged to each client, curently expecting only json strings
 func (manager *ClientManager) receive(client *Client) {
+	var command Command
+	decoder := json.NewDecoder(client.socket)
 	for {
-		var commands map[string]Command
-		decoder := json.NewDecoder(client.socket)
-		err := decoder.Decode(&commands)
+		err := decoder.Decode(&command)
 		if err != nil {
+			fmt.Println(err)
 			manager.unregister <- client
 			client.socket.Close()
 			break
 		}
 		fmt.Println("Received commands")
-		handleCommands(&commands)
+		handleCommand(&command)
 		// manager.broadcast <- message
-		client.data <- []byte(`{"status":"acknowledged"}`)
+		acknowledge := Command{Status: "Acknowledged"}
+		client.data <- acknowledge
 	}
 }
 
 // Handle receaved messages in clinet mode
 func (client *Client) receive() {
+	var command Command
+	decoder := json.NewDecoder(client.socket)
 	for {
-		message := make([]byte, 4096)
-		length, err := client.socket.Read(message)
+		err := decoder.Decode(&command)
 		if err != nil {
 			client.socket.Close()
 			break
 		}
-		if length > 0 {
-			fmt.Println("RECEIVED: " + string(message))
-		}
+		handleCommand(&command)
 	}
 }
 
 // Send message to client
 func (manager *ClientManager) send(client *Client) {
 	defer client.socket.Close()
+	encoder := json.NewEncoder(client.socket)
 	for {
 		select {
-		case message, ok := <-client.data:
+		case command, ok := <-client.data:
 			if !ok {
 				return
 			}
-			client.socket.Write(message)
+			encoder.Encode(command)
 		}
 	}
 }
 
-func handleCommands(commands *map[string]Command) {
-	for cKey, command := range *commands {
-		fmt.Printf("Key: %s, Command: %s\n", cKey, command)
+func handleCommand(command *Command) {
+	if len(command.Command) > 0 {
+		fmt.Printf("Command: %s\n", command.Command)
+	}
+	if len(command.Status) > 0 {
+		fmt.Printf("Status: %s\n", command.Status)
 	}
 }
 
@@ -113,7 +119,7 @@ func startServerMode() {
 	}
 	manager := ClientManager{
 		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan Command),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
@@ -123,7 +129,7 @@ func startServerMode() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		client := &Client{socket: connection, data: make(chan []byte)}
+		client := &Client{socket: connection, data: make(chan Command)}
 		manager.register <- client
 		go manager.receive(client)
 		go manager.send(client)
@@ -138,13 +144,14 @@ func startClientMode() {
 	}
 	client := &Client{socket: connection}
 	go client.receive()
+	encoder := json.NewEncoder(client.socket)
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		message, _ := reader.ReadString('\n')
-		fmt.Println(message)
+		fmt.Printf("%s", message)
 		// Test Strings:
-		testMessage := `{ "1": {"command": "Hello"}, "2": {"command": "Hello2"}}`
-		connection.Write([]byte(strings.TrimRight(testMessage, "\n")))
+		testMessage := Command{Command: "Hello"}
+		encoder.Encode(testMessage)
 	}
 }
 
