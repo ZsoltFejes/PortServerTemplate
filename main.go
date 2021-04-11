@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"crypto/rand"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 type ClientManager struct {
@@ -113,7 +116,16 @@ func handleCommand(command *Command) {
 
 func startServerMode() {
 	fmt.Println("Starting server...")
-	listener, err := net.Listen("tcp", ":12345")
+	basePath := os.Getenv("GOPATH") + "/src/github.com/ZsoltFejes/go_link/"
+	cert, err := tls.LoadX509KeyPair(basePath+"server.crt", basePath+"server.key")
+	if err != nil {
+		fmt.Println(err)
+	}
+	config := tls.Config{Certificates: []tls.Certificate{cert}}
+	now := time.Now()
+	config.Time = func() time.Time { return now }
+	config.Rand = rand.Reader
+	listener, err := tls.Listen("tcp", ":12345", &config)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -138,7 +150,9 @@ func startServerMode() {
 
 func startClientMode() {
 	fmt.Println("Starting client...")
-	connection, err := net.Dial("tcp", "localhost:12345")
+	// For Testing certificate verification is disabled
+	config := tls.Config{InsecureSkipVerify: true}
+	connection, err := tls.Dial("tcp", "localhost:12345", &config)
 	if err != nil {
 		fmt.Println(err)
 	}
