@@ -114,20 +114,30 @@ func handleCommand(command *Command) {
 	}
 }
 
-func startServerMode() {
-	fmt.Println("Starting server...")
-	basePath := os.Getenv("GOPATH") + "/src/github.com/ZsoltFejes/go_link/"
-	cert, err := tls.LoadX509KeyPair(basePath+"server.crt", basePath+"server.key")
+// Check Error function for universal error handling
+func checkErr(message string, err interface{}) {
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("%s- %s\n", message, err)
 	}
-	config := tls.Config{Certificates: []tls.Certificate{cert}}
-	now := time.Now()
-	config.Time = func() time.Time { return now }
-	config.Rand = rand.Reader
-	listener, err := tls.Listen("tcp", ":12345", &config)
-	if err != nil {
-		fmt.Println(err)
+}
+
+func startServerMode(ecrypt *bool) {
+	fmt.Println("Starting server...")
+	var listener net.Listener
+	if *ecrypt {
+		basePath := os.Getenv("GOPATH") + "/src/github.com/ZsoltFejes/go_link/"
+		cert, err := tls.LoadX509KeyPair(basePath+"server.crt", basePath+"server.key")
+		checkErr("Importing TLS certifiacets", err)
+		config := tls.Config{Certificates: []tls.Certificate{cert}}
+		now := time.Now()
+		config.Time = func() time.Time { return now }
+		config.Rand = rand.Reader
+		listener, err = tls.Listen("tcp", ":12345", &config)
+		checkErr("Creating TLS listener", err)
+	} else {
+		var err error
+		listener, err = net.Listen("tcp", ":12345")
+		checkErr("Creating NET listener", err)
 	}
 	manager := ClientManager{
 		clients:    make(map[*Client]bool),
@@ -138,9 +148,7 @@ func startServerMode() {
 	go manager.start()
 	for {
 		connection, err := listener.Accept()
-		if err != nil {
-			fmt.Println(err)
-		}
+		checkErr("Accepting connection", err)
 		client := &Client{socket: connection, data: make(chan Command)}
 		manager.register <- client
 		go manager.receive(client)
@@ -148,15 +156,20 @@ func startServerMode() {
 	}
 }
 
-func startClientMode() {
+func startClientMode(encrypt *bool) {
 	fmt.Println("Starting client...")
-	// For Testing certificate verification is disabled
-	config := tls.Config{InsecureSkipVerify: true}
-	connection, err := tls.Dial("tcp", "localhost:12345", &config)
-	if err != nil {
-		fmt.Println(err)
+	client := &Client{}
+	if *encrypt {
+		// For Testing certificate verification is disabled
+		config := tls.Config{InsecureSkipVerify: true}
+		connection, err := tls.Dial("tcp", "localhost:12345", &config)
+		checkErr("Connecting to server with TLS error", err)
+		client.socket = connection
+	} else {
+		connection, err := net.Dial("tcp", "localhost:12345")
+		checkErr("Connecting to server error", err)
+		client.socket = connection
 	}
-	client := &Client{socket: connection}
 	go client.receive()
 	encoder := json.NewEncoder(client.socket)
 	for {
@@ -171,10 +184,11 @@ func startClientMode() {
 
 func main() {
 	flagMode := flag.String("mode", "server", "Start in client or server mode")
+	flagTLS := flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as server.crt and server.key)")
 	flag.Parse()
 	if strings.ToLower(*flagMode) == "server" {
-		startServerMode()
+		startServerMode(flagTLS)
 	} else {
-		startClientMode()
+		startClientMode(flagTLS)
 	}
 }
