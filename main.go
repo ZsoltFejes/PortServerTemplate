@@ -20,6 +20,13 @@ type ClientManager struct {
 	unregister chan *Client
 }
 
+var manager = ClientManager{
+	clients:    make(map[*Client]bool),
+	broadcast:  make(chan Command),
+	register:   make(chan *Client),
+	unregister: make(chan *Client),
+}
+
 type Client struct {
 	socket net.Conn
 	data   chan Command
@@ -56,7 +63,7 @@ func (manager *ClientManager) start() {
 	}
 }
 
-// Handle receaved messages in server, needs to be assnged to each client, curently expecting only json strings
+// Handle received messages in server, needs to be assinged to each client, curently expecting only json strings
 func (manager *ClientManager) receive(client *Client) {
 	var command Command
 	decoder := json.NewDecoder(client.socket)
@@ -69,14 +76,11 @@ func (manager *ClientManager) receive(client *Client) {
 			break
 		}
 		fmt.Println("Received commands")
-		handleCommand(&command)
-		// manager.broadcast <- message
-		acknowledge := Command{Status: "Acknowledged"}
-		client.data <- acknowledge
+		handleCommand(&command, client)
 	}
 }
 
-// Handle receaved messages in clinet mode
+// Handle received messages in clinet mode
 func (client *Client) receive() {
 	var command Command
 	decoder := json.NewDecoder(client.socket)
@@ -86,7 +90,7 @@ func (client *Client) receive() {
 			client.socket.Close()
 			break
 		}
-		handleCommand(&command)
+		handleCommand(&command, client)
 	}
 }
 
@@ -105,9 +109,11 @@ func (manager *ClientManager) send(client *Client) {
 	}
 }
 
-func handleCommand(command *Command) {
+func handleCommand(command *Command, client *Client) {
 	if len(command.Command) > 0 {
-		fmt.Printf("Command: %s\n", command.Command)
+		fmt.Printf("Received Command: %s\n", command.Command)
+		acknowledge := Command{Status: "Acknowledged"}
+		client.data <- acknowledge
 	}
 	if len(command.Status) > 0 {
 		fmt.Printf("Status: %s\n", command.Status)
@@ -121,7 +127,7 @@ func checkErr(message string, err interface{}) {
 	}
 }
 
-func startServerMode(ecrypt *bool) {
+func startServerMode(manager *ClientManager, ecrypt *bool) {
 	fmt.Println("Starting server...")
 	var listener net.Listener
 	if *ecrypt {
@@ -139,13 +145,8 @@ func startServerMode(ecrypt *bool) {
 		listener, err = net.Listen("tcp", ":12345")
 		checkErr("Creating NET listener", err)
 	}
-	manager := ClientManager{
-		clients:    make(map[*Client]bool),
-		broadcast:  make(chan Command),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-	}
 	go manager.start()
+	go startHttpServer()
 	for {
 		connection, err := listener.Accept()
 		checkErr("Accepting connection", err)
@@ -187,7 +188,7 @@ func main() {
 	flagTLS := flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as server.crt and server.key)")
 	flag.Parse()
 	if strings.ToLower(*flagMode) == "server" {
-		startServerMode(flagTLS)
+		startServerMode(&manager, flagTLS)
 	} else {
 		startClientMode(flagTLS)
 	}
