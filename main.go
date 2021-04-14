@@ -33,8 +33,9 @@ type Client struct {
 }
 
 type Command struct {
-	Command string `json:"command,omitempty"`
-	Status  string `json:"status,omitempty"`
+	Command   string `json:"command,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Broadcast string `json:"broadcast,omitempty"`
 }
 
 // Start Client manager
