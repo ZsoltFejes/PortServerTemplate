@@ -19,7 +19,6 @@ func startHttpServer() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// TODO: This API end point have not been tested
 func testBroadcast(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
@@ -43,7 +42,10 @@ func testBroadcast(w http.ResponseWriter, r *http.Request) {
 				response := Response{Status: "Error", Completed: false}
 				json.NewEncoder(w).Encode(response)
 			}
-
 		}
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		response := Response{Status: "Error", Completed: false}
+		json.NewEncoder(w).Encode(response)
 	}
 }

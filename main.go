@@ -64,7 +64,8 @@ func (manager *ClientManager) start() {
 	}
 }
 
-// Handle received messages in server, needs to be assinged to each client, curently expecting only json strings
+// Handle received messages in server, needs to be assinged to each client,
+// curently expecting only json strings
 func (manager *ClientManager) receive(client *Client) {
 	var command Command
 	decoder := json.NewDecoder(client.socket)
@@ -118,6 +119,9 @@ func handleCommand(command *Command, client *Client) {
 	}
 	if len(command.Status) > 0 {
 		fmt.Printf("Status: %s\n", command.Status)
+	}
+	if len(command.Broadcast) > 0 {
+		fmt.Println("Broadcast Message: " + command.Broadcast)
 	}
 }
 
