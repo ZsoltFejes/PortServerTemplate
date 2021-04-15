@@ -11,20 +11,20 @@ import (
 
 type Client struct {
 	socket net.Conn
-	data   chan Command
+	data   chan Job
 }
 
 // Handle received messages in clinet mode
 func (client *Client) receive() {
-	var command Command
+	var job Job
 	decoder := json.NewDecoder(client.socket)
 	for {
-		err := decoder.Decode(&command)
+		err := decoder.Decode(&job)
 		if err != nil {
 			client.socket.Close()
 			break
 		}
-		handleCommand(&command, client)
+		handleJob(&job, client)
 	}
 }
 
@@ -49,7 +49,7 @@ func startClientMode(encrypt *bool) {
 		message, _ := reader.ReadString('\n')
 		fmt.Printf("%s", message)
 		// Test Strings:
-		testMessage := Command{Command: "Hello"}
+		testMessage := Job{Command: "Hello"}
 		err := encoder.Encode(testMessage)
 		if err != nil {
 			fmt.Printf("Encoding Error: %s", err)

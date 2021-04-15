@@ -12,14 +12,14 @@ import (
 
 type ClientManager struct {
 	clients    map[*Client]bool
-	broadcast  chan Command
+	broadcast  chan Job
 	register   chan *Client
 	unregister chan *Client
 }
 
 var manager = ClientManager{
 	clients:    make(map[*Client]bool),
-	broadcast:  make(chan Command),
+	broadcast:  make(chan Job),
 	register:   make(chan *Client),
 	unregister: make(chan *Client),
 }
@@ -53,18 +53,18 @@ func (manager *ClientManager) start() {
 // Handle received messages in server, needs to be assinged to each client,
 // curently expecting only json strings
 func (manager *ClientManager) receive(client *Client) {
-	var command Command
+	var job Job
 	decoder := json.NewDecoder(client.socket)
 	for {
-		err := decoder.Decode(&command)
+		err := decoder.Decode(&job)
 		if err != nil {
 			fmt.Println(err)
 			manager.unregister <- client
 			client.socket.Close()
 			break
 		}
-		fmt.Println("Received commands")
-		handleCommand(&command, client)
+		fmt.Println("Received jobs")
+		handleJob(&job, client)
 	}
 }
 
@@ -74,11 +74,11 @@ func (manager *ClientManager) send(client *Client) {
 	encoder := json.NewEncoder(client.socket)
 	for {
 		select {
-		case command, ok := <-client.data:
+		case job, ok := <-client.data:
 			if !ok {
 				return
 			}
-			encoder.Encode(command)
+			encoder.Encode(job)
 		}
 	}
 }
@@ -106,7 +106,7 @@ func startServerMode(manager *ClientManager, ecrypt *bool) {
 	for {
 		connection, err := listener.Accept()
 		checkErr("Accepting connection", err)
-		client := &Client{socket: connection, data: make(chan Command)}
+		client := &Client{socket: connection, data: make(chan Job)}
 		manager.register <- client
 		go manager.receive(client)
 		go manager.send(client)

@@ -6,23 +6,24 @@ import (
 	"strings"
 )
 
-type Command struct {
-	Command   string `json:"command,omitempty"`
+type Job struct {
+	Command   string `json:"Job,omitempty"`
+	Message   string `json:"Message,omitempty"`
 	Status    string `json:"status,omitempty"`
 	Broadcast string `json:"broadcast,omitempty"`
 }
 
-func handleCommand(command *Command, client *Client) {
-	if len(command.Command) > 0 {
-		fmt.Printf("Received Command: %s\n", command.Command)
-		acknowledge := Command{Status: "Acknowledged"}
+func handleJob(job *Job, client *Client) {
+	if len(job.Command) > 0 {
+		fmt.Printf("Received Job: %s\n", job.Command)
+		acknowledge := Job{Status: "Acknowledged"}
 		client.data <- acknowledge
 	}
-	if len(command.Status) > 0 {
-		fmt.Printf("Status: %s\n", command.Status)
+	if len(job.Status) > 0 {
+		fmt.Printf("Status: %s\n", job.Status)
 	}
-	if len(command.Broadcast) > 0 {
-		fmt.Println("Broadcast Message: " + command.Broadcast)
+	if len(job.Broadcast) > 0 {
+		fmt.Println("Broadcast Message: " + job.Broadcast)
 	}
 }
 
