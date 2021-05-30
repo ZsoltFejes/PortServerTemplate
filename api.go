@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -14,15 +15,17 @@ type Response struct {
 
 // Start REST Api Server
 func startHttpServer() {
+	port := ":8080"
 	http.HandleFunc("/", testBroadcast)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("API is Listening on port " + port)
+	log.Fatal(http.ListenAndServe(port, nil))
 }
 
 func testBroadcast(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		id := getID()
-		manager.broadcast <- Job{Message: "Hello from API", ID: id}
+		server.broadcast <- Job{Message: "Hello from API", ID: id}
 		w.WriteHeader(http.StatusOK)
 		response := Response{Status: "Broadcasted", Completed: true, ID: id}
 		json.NewEncoder(w).Encode(response)

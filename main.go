@@ -15,7 +15,7 @@ func checkErr(message string, err interface{}) {
 	}
 }
 
-// Random string generator to identify Sockets
+// Random string generator to identify Jobs
 func getID() string {
 	var characters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 	b := make([]rune, 8)
@@ -31,8 +31,10 @@ func main() {
 	flagTLS := flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as server.crt and server.key)")
 	flag.Parse()
 	if strings.ToLower(*flagMode) == "server" {
-		startServerMode(&manager, flagTLS)
-	} else {
+		startServerMode(&server, flagTLS)
+	} else if strings.ToLower(*flagMode) == "client" {
 		startClientMode(flagTLS)
+	} else {
+		fmt.Println("Mode is unknown!")
 	}
 }
