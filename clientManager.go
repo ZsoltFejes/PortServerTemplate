@@ -63,7 +63,6 @@ func (manager *ClientManager) receive(client *Client) {
 			client.socket.Close()
 			break
 		}
-		fmt.Println("Received jobs")
 		handleJob(&job, client)
 	}
 }

@@ -47,9 +47,10 @@ func startClientMode(encrypt *bool) {
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		message, _ := reader.ReadString('\n')
+		// TODO: Remove the following after testing:
 		fmt.Printf("%s", message)
 		// Test Strings:
-		testMessage := Job{Command: "Hello"}
+		testMessage := Job{Command: "ping"}
 		err := encoder.Encode(testMessage)
 		if err != nil {
 			fmt.Printf("Encoding Error: %s", err)
