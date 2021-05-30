@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 type Client struct {
@@ -46,16 +47,18 @@ func startClientMode(encrypt *bool) {
 	encoder := json.NewEncoder(client.socket)
 	for {
 		reader := bufio.NewReader(os.Stdin)
-		message, _ := reader.ReadString('\n')
-		// TODO: Remove the following after testing:
-		fmt.Printf("%s", message)
-		// Test Strings:
-		testMessage := Job{Command: "ping"}
-		err := encoder.Encode(testMessage)
-		if err != nil {
-			fmt.Printf("Encoding Error: %s", err)
-			client.socket.Close()
-			break
+		input, _ := reader.ReadString('\n')
+		args := strings.Fields(input)
+		if len(args) > 0 {
+			command := Job{Command: args[0], ID: getID()}
+			err := encoder.Encode(command)
+			if err != nil {
+				fmt.Printf("Encoding Error: %s", err)
+				client.socket.Close()
+				break
+			}
+		} else {
+			fmt.Println("Type a command")
 		}
 	}
 }

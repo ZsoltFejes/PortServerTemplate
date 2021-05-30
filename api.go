@@ -9,6 +9,7 @@ import (
 type Response struct {
 	Status    string
 	Completed bool
+	ID        string
 }
 
 // Start REST Api Server
@@ -20,8 +21,10 @@ func startHttpServer() {
 func testBroadcast(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
+		id := getID()
+		manager.broadcast <- Job{Message: "Hello from API", ID: id}
 		w.WriteHeader(http.StatusOK)
-		response := Response{Status: "Broadcasted", Completed: true}
+		response := Response{Status: "Broadcasted", Completed: true, ID: id}
 		json.NewEncoder(w).Encode(response)
 	default:
 		w.WriteHeader(http.StatusNotFound)
