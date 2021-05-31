@@ -85,7 +85,7 @@ func startServerMode(server *Server, ecrypt *bool) {
 	l("Starting server...", false, true)
 	var listener net.Listener
 	if *ecrypt {
-		cert, err := tls.LoadX509KeyPair(WORKDIR+"/server.crt", WORKDIR+"/server.key")
+		cert, err := tls.LoadX509KeyPair(WORKDIR+"/cert.pem", WORKDIR+"/key.pem")
 		checkErr("Importing TLS certificates error", err)
 		config := tls.Config{Certificates: []tls.Certificate{cert}}
 		now := time.Now()

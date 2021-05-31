@@ -18,6 +18,8 @@
 *.crt
 *.csr
 *.key
+*.pem
 
 # LOG
 *.log
+

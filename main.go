@@ -11,8 +11,14 @@ import (
 	"time"
 )
 
-var WORKDIR string
-var debug bool
+// TODO: Config support; config.json
+
+var (
+	WORKDIR  string
+	flagMode = flag.String("mode", "client", "Start in client or server mode")
+	flagTLS  = flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as cert.pem and key.pem)")
+	debug    = flag.Bool("debug", false, "Set process to debug")
+)
 
 // Check Error function for universal error handling
 func checkErr(message string, err error) {
@@ -22,7 +28,7 @@ func checkErr(message string, err error) {
 }
 
 func l(message string, fatal bool, public bool) {
-	if public || debug {
+	if public || *debug {
 		fmt.Println(message)
 	}
 	if fatal {
@@ -44,9 +50,6 @@ func getID() string {
 
 func main() {
 	rand.Seed(time.Now().UnixNano()) // Seed random with current time
-	flagMode := flag.String("mode", "client", "Start in client or server mode")
-	flagTLS := flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as server.crt and server.key)")
-	flag.BoolVar(&debug, "debug", false, "Set process to debug")
 	flag.Parse()
 
 	// Set working directory

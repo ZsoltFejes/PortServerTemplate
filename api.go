@@ -17,7 +17,7 @@ func startHttpServer() {
 	l("Starting API server...", false, true)
 	port := ":8080"
 	http.HandleFunc("/", testBroadcast)
-	l("API server is listening on port "+port, false, false)
+	l("API server is listening on port "+port, false, true)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
 
