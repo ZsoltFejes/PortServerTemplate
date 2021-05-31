@@ -8,16 +8,24 @@ type Job struct {
 	Args    []string `json:"args,omitempty"`
 }
 
+func (job *Job) reset() {
+	job.Args = nil
+	job.Command = ""
+	job.ID = ""
+	job.Message = ""
+	job.Status = ""
+}
+
 // Handle incoming jobs
-func handleJob(job *Job, client *Client) {
+func handleJob(job Job, client *Client) {
 	if len(job.Command) > 0 {
 		l("["+job.ID+"] Received Command: "+job.Command, false, false)
 		// Handle different commands by calling a function
 		switch job.Command {
 		case "ping":
-			pong(job, client)
+			go pong(job, client)
 		default:
-			unknownCommand(client)
+			go unknownCommand(job, client)
 		}
 	}
 	if len(job.Status) > 0 {
@@ -28,12 +36,12 @@ func handleJob(job *Job, client *Client) {
 	}
 }
 
-func pong(job *Job, client *Client) {
+func pong(job Job, client *Client) {
 	pong := Job{Message: "PONG", ID: job.ID}
 	client.data <- pong
 }
 
-func unknownCommand(client *Client) {
-	err := Job{Message: "Unknown Command", Status: "ERROR"}
+func unknownCommand(job Job, client *Client) {
+	err := Job{Message: "Unknown Command", Status: "ERROR", ID: job.ID}
 	client.data <- err
 }

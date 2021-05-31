@@ -24,7 +24,7 @@ var server = Server{
 
 // Start Client manager
 func (server *Server) start() {
-	l("Server started", false, true)
+	l("Server started "+appConfig.Server.Address+":"+appConfig.Server.Port, false, true)
 	for {
 		select {
 		case connection := <-server.register:
@@ -52,8 +52,8 @@ func (server *Server) start() {
 // Handle received messages in server, needs to be assinged to each client,
 // curently expecting only json strings
 func (server *Server) receive(client *Client) {
-	var job Job
 	decoder := json.NewDecoder(client.socket)
+	var job Job
 	for {
 		err := decoder.Decode(&job)
 		if err != nil {
@@ -62,7 +62,8 @@ func (server *Server) receive(client *Client) {
 			client.socket.Close()
 			break
 		}
-		go handleJob(&job, client)
+		go handleJob(job, client)
+		job.reset()
 	}
 }
 
@@ -91,11 +92,11 @@ func startServerMode(server *Server, ecrypt *bool) {
 		now := time.Now()
 		config.Time = func() time.Time { return now }
 		config.Rand = rand.Reader
-		listener, err = tls.Listen("tcp", ":12345", &config)
+		listener, err = tls.Listen("tcp", appConfig.Server.Address+":"+appConfig.Server.Port, &config)
 		checkErr("Creating TLS listener error", err)
 	} else {
 		var err error
-		listener, err = net.Listen("tcp", ":12345")
+		listener, err = net.Listen("tcp", appConfig.Server.Address+":"+appConfig.Server.Port)
 		checkErr("Creating NET listener error", err)
 	}
 	go server.start()

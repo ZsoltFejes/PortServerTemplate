@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -12,12 +14,23 @@ import (
 )
 
 // TODO: Config support; config.json
+type Config struct {
+	Server PortIP `json:"server,omitempty"`
+	Api    PortIP `json:"api,omitempty"`
+	Client PortIP `json:"client,omitempty"`
+}
+
+type PortIP struct {
+	Address string `json:"address,omitempty"`
+	Port    string `json:"port,omitempty"`
+}
 
 var (
-	WORKDIR  string
-	flagMode = flag.String("mode", "client", "Start in client or server mode")
-	flagTLS  = flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as cert.pem and key.pem)")
-	debug    = flag.Bool("debug", false, "Set process to debug")
+	WORKDIR   string
+	flagMode  = flag.String("mode", "client", "Start in client or server mode")
+	flagTLS   = flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as cert.pem and key.pem)")
+	debug     = flag.Bool("debug", false, "Set process to debug")
+	appConfig Config
 )
 
 // Check Error function for universal error handling
@@ -66,6 +79,12 @@ func main() {
 	}
 	defer f.Close()
 	log.SetOutput(f)
+
+	// Load config file
+	configFile, err := ioutil.ReadFile(WORKDIR + "/config.json")
+	checkErr("Reading Config file error", err)
+	err = json.Unmarshal(configFile, &appConfig)
+	checkErr("Pasring config file error", err)
 
 	// Start application in requested mode
 	if strings.ToLower(*flagMode) == "server" {

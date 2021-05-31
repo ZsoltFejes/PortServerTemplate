@@ -24,7 +24,8 @@ func (client *Client) receive() {
 			client.socket.Close()
 			break
 		}
-		go handleJob(&job, client)
+		go handleJob(job, client)
+		job.reset()
 	}
 }
 
@@ -34,11 +35,11 @@ func startClientMode(encrypt *bool) {
 	if *encrypt {
 		// For Testing certificate verification is disabled
 		config := tls.Config{InsecureSkipVerify: true}
-		connection, err := tls.Dial("tcp", "localhost:12345", &config)
+		connection, err := tls.Dial("tcp", appConfig.Api.Address+":"+appConfig.Client.Port, &config)
 		checkErr("Connecting to server with TLS error", err)
 		client.socket = connection
 	} else {
-		connection, err := net.Dial("tcp", "localhost:12345")
+		connection, err := net.Dial("tcp", appConfig.Api.Address+":"+appConfig.Client.Port)
 		checkErr("Connecting to server error", err)
 		client.socket = connection
 	}

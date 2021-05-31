@@ -15,10 +15,9 @@ type Response struct {
 // Start REST Api Server
 func startHttpServer() {
 	l("Starting API server...", false, true)
-	port := ":8080"
 	http.HandleFunc("/", testBroadcast)
-	l("API server is listening on port "+port, false, true)
-	log.Fatal(http.ListenAndServe(port, nil))
+	l("API server is listening on port "+appConfig.Api.Address+":"+appConfig.Api.Port, false, true)
+	log.Fatal(http.ListenAndServe(appConfig.Api.Address+":"+appConfig.Api.Port, nil))
 }
 
 func testBroadcast(w http.ResponseWriter, r *http.Request) {

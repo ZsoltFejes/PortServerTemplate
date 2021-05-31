@@ -23,3 +23,5 @@
 # LOG
 *.log
 
+# Config
+config.json
