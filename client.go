@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -25,12 +24,12 @@ func (client *Client) receive() {
 			client.socket.Close()
 			break
 		}
-		handleJob(&job, client)
+		go handleJob(&job, client)
 	}
 }
 
 func startClientMode(encrypt *bool) {
-	fmt.Println("Starting client...")
+	l("Starting client...", false, true)
 	client := &Client{}
 	if *encrypt {
 		// For Testing certificate verification is disabled
@@ -43,6 +42,7 @@ func startClientMode(encrypt *bool) {
 		checkErr("Connecting to server error", err)
 		client.socket = connection
 	}
+	l("Client Connected", false, true)
 	go client.receive()
 	encoder := json.NewEncoder(client.socket)
 	for {
@@ -53,12 +53,12 @@ func startClientMode(encrypt *bool) {
 			command := Job{Command: args[0], ID: getID()}
 			err := encoder.Encode(command)
 			if err != nil {
-				fmt.Printf("Encoding Error: %s", err)
+				l("Encoding Error: "+err.Error(), false, false)
 				client.socket.Close()
 				break
 			}
 		} else {
-			fmt.Println("Type a command")
+			l("Type a command", false, true)
 		}
 	}
 }

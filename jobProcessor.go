@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 type Job struct {
 	ID      string   `json:"id,omitempty"`
 	Command string   `json:"command,omitempty"`
@@ -15,7 +11,7 @@ type Job struct {
 // Handle incoming jobs
 func handleJob(job *Job, client *Client) {
 	if len(job.Command) > 0 {
-		fmt.Printf("[%s] Received Command: %s\n", job.ID, job.Command)
+		l("["+job.ID+"] Received Command: "+job.Command, false, false)
 		// Handle different commands by calling a function
 		switch job.Command {
 		case "ping":
@@ -25,12 +21,10 @@ func handleJob(job *Job, client *Client) {
 		}
 	}
 	if len(job.Status) > 0 {
-		// TODO: Move it to logs instead of print
-		fmt.Printf("[%s] Status: %s\n", job.ID, job.Status)
+		l("["+job.ID+"] Status: "+job.Status, false, false)
 	}
 	if len(job.Message) > 0 {
-		// TODO: Move it to logs instead of print
-		fmt.Printf("[%s] Message: %s\n", job.ID, job.Message)
+		l("["+job.ID+"] Message: "+job.Message, false, false)
 	}
 }
 

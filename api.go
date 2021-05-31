@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -15,9 +14,10 @@ type Response struct {
 
 // Start REST Api Server
 func startHttpServer() {
+	l("Starting API server...", false, true)
 	port := ":8080"
 	http.HandleFunc("/", testBroadcast)
-	fmt.Println("API is Listening on port " + port)
+	l("API server is listening on port "+port, false, false)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
 

@@ -4,9 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"net"
-	"os"
 	"time"
 )
 
@@ -26,16 +24,17 @@ var server = Server{
 
 // Start Client manager
 func (server *Server) start() {
+	l("Server started", false, true)
 	for {
 		select {
 		case connection := <-server.register:
 			server.clients[connection] = true
-			fmt.Println("Added new connection! " + connection.socket.RemoteAddr().String())
+			l("Added new connection! "+connection.socket.RemoteAddr().String(), false, false)
 		case connection := <-server.unregister:
 			if _, ok := server.clients[connection]; ok {
 				close(connection.data)
 				delete(server.clients, connection)
-				fmt.Println("A connection has been terminated " + connection.socket.RemoteAddr().String())
+				l("A connection has been terminated "+connection.socket.RemoteAddr().String(), false, false)
 			}
 		case message := <-server.broadcast:
 			for connection := range server.clients {
@@ -58,12 +57,12 @@ func (server *Server) receive(client *Client) {
 	for {
 		err := decoder.Decode(&job)
 		if err != nil {
-			fmt.Println(err)
+			l(err.Error(), false, false)
 			server.unregister <- client
 			client.socket.Close()
 			break
 		}
-		handleJob(&job, client)
+		go handleJob(&job, client)
 	}
 }
 
@@ -82,32 +81,31 @@ func (server *Server) send(client *Client) {
 	}
 }
 
-func startServerMode(manager *Server, ecrypt *bool) {
-	fmt.Println("Starting server...")
+func startServerMode(server *Server, ecrypt *bool) {
+	l("Starting server...", false, true)
 	var listener net.Listener
 	if *ecrypt {
-		basePath := os.Getenv("GOPATH") + "/src/github.com/ZsoltFejes/go_link/"
-		cert, err := tls.LoadX509KeyPair(basePath+"server.crt", basePath+"server.key")
-		checkErr("Importing TLS certifiacets", err)
+		cert, err := tls.LoadX509KeyPair(WORKDIR+"/server.crt", WORKDIR+"/server.key")
+		checkErr("Importing TLS certificates error", err)
 		config := tls.Config{Certificates: []tls.Certificate{cert}}
 		now := time.Now()
 		config.Time = func() time.Time { return now }
 		config.Rand = rand.Reader
 		listener, err = tls.Listen("tcp", ":12345", &config)
-		checkErr("Creating TLS listener", err)
+		checkErr("Creating TLS listener error", err)
 	} else {
 		var err error
 		listener, err = net.Listen("tcp", ":12345")
-		checkErr("Creating NET listener", err)
+		checkErr("Creating NET listener error", err)
 	}
-	go manager.start()
+	go server.start()
 	go startHttpServer()
 	for {
 		connection, err := listener.Accept()
-		checkErr("Accepting connection", err)
+		checkErr("Accepting connection error", err)
 		client := &Client{socket: connection, data: make(chan Job)}
-		manager.register <- client
-		go manager.receive(client)
-		go manager.send(client)
+		server.register <- client
+		go server.receive(client)
+		go server.send(client)
 	}
 }
