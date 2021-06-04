@@ -49,8 +49,10 @@ func (server *Server) start() {
 	}
 }
 
-// Handle received messages in server, needs to be assinged to each client,
-// curently expecting only json strings
+/*For each client a receive routine is started. It handles jobs sent from that client.
+
+Only Job objects sent as JSON are accepted across the socket
+*/
 func (server *Server) receive(client *Client) {
 	decoder := json.NewDecoder(client.socket)
 	var job Job
@@ -67,7 +69,12 @@ func (server *Server) receive(client *Client) {
 	}
 }
 
-// Send message to client
+/*For each client a send routine is started.
+
+Job objects sent on the client's data channel will be sent to the clinet.
+
+Only Job objects can be sent on the socket.
+*/
 func (server *Server) send(client *Client) {
 	defer client.socket.Close()
 	encoder := json.NewEncoder(client.socket)
@@ -82,6 +89,10 @@ func (server *Server) send(client *Client) {
 	}
 }
 
+/* Starts server specific goroutines.
+The function creates a TLS or unenctypted socket based on the configuraiton. Then starts listening on the specified port for incoming TCP requests.
+If a TCP connection is esablished, the connection will be registered as aclient then the server starts a go routine for receiving data from and for sending data to the client.
+*/
 func startServerMode(server *Server, ecrypt *bool) {
 	l("Starting server...", false, true)
 	var listener net.Listener

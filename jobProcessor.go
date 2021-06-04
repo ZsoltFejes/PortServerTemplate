@@ -23,9 +23,10 @@ func handleJob(job Job, client *Client) {
 		// Handle different commands by calling a function
 		switch job.Command {
 		case "ping":
-			go pong(job, client)
+			pong(job, client)
+		// If command is not found an error message will be sent back to the sender
 		default:
-			go unknownCommand(job, client)
+			unknownCommand(job, client)
 		}
 	}
 	if len(job.Status) > 0 {
