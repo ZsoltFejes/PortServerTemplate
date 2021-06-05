@@ -1,5 +1,7 @@
 package main
 
+// TODO Rework job processor to include outgoing requests and meausre job completion time
+
 type Job struct {
 	ID      string   `json:"id,omitempty"`
 	Command string   `json:"command,omitempty"`

@@ -7,11 +7,15 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
+// TODO Rework latency and outgoing requests to be handeled per job, so outgoung requests will be part of the jpb processor
+
 type Client struct {
-	socket net.Conn
-	data   chan Job
+	socket     net.Conn
+	data       chan Job
+	comandSent chan bool
 }
 
 // Handle received messages in clinet mode
@@ -24,6 +28,7 @@ func (client *Client) receive() {
 			client.socket.Close()
 			break
 		}
+		client.comandSent <- false
 		go handleJob(job, client)
 		job.reset()
 	}
@@ -31,7 +36,7 @@ func (client *Client) receive() {
 
 func startClientMode(encrypt *bool) {
 	l("Starting client...", false, true)
-	client := &Client{}
+	client := &Client{comandSent: make(chan bool)}
 	if *encrypt {
 		// For Testing certificate verification is disabled
 		config := tls.Config{InsecureSkipVerify: true}
@@ -44,6 +49,7 @@ func startClientMode(encrypt *bool) {
 		client.socket = connection
 	}
 	l("Client Connected", false, true)
+	go client.latency() // Latency is added for testing
 	go client.receive()
 	encoder := json.NewEncoder(client.socket)
 	for {
@@ -58,8 +64,30 @@ func startClientMode(encrypt *bool) {
 				client.socket.Close()
 				break
 			}
+			client.comandSent <- true
 		} else {
 			l("Type a command", false, true)
+		}
+	}
+}
+
+// This feature will be part of job processor instead of the client
+func (client *Client) latency() {
+	var now time.Time
+	waiting := false
+	for {
+		select {
+		case commandSent := <-client.comandSent:
+			if commandSent {
+				now = time.Now()
+				if waiting {
+					l("Application was waiting for an answer from the server", false, true)
+				}
+				waiting = true
+			} else {
+				waiting = false
+				l(time.Since(now).String(), false, true)
+			}
 		}
 	}
 }
