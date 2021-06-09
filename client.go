@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/json"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -34,10 +35,18 @@ func (client *Client) receive() {
 	}
 }
 
-func startClientMode(encrypt *bool) {
+func startClientMode() {
+	// Create or open log directory
+	f, err := os.OpenFile(WORKDIR+`/client.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		l(err.Error(), true, true)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
 	l("Starting client...", false, true)
 	client := &Client{comandSent: make(chan bool)}
-	if *encrypt {
+	if appConfig.Tls {
 		// For Testing certificate verification is disabled
 		config := tls.Config{InsecureSkipVerify: true}
 		connection, err := tls.Dial("tcp", appConfig.Api.Address+":"+appConfig.Client.Port, &config)

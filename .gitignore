@@ -24,4 +24,5 @@
 *.log
 
 # Config
-config.json
+clientConfig.json
+serverConfig.json

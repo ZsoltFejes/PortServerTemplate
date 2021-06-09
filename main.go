@@ -9,15 +9,14 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
-// TODO: Config support; config.json
 type Config struct {
 	Server PortIP `json:"server,omitempty"`
 	Api    PortIP `json:"api,omitempty"`
 	Client PortIP `json:"client,omitempty"`
+	Tls    bool   `json:"tls"`
 }
 
 type PortIP struct {
@@ -26,11 +25,10 @@ type PortIP struct {
 }
 
 var (
-	WORKDIR   string
-	flagMode  = flag.String("mode", "client", "Start in client or server mode")
-	flagTLS   = flag.Bool("tls", false, "Set Server to use TLS (Add certifiacet to root directory as cert.pem and key.pem)")
-	debug     = flag.Bool("debug", false, "Set process to debug")
-	appConfig Config
+	WORKDIR    string
+	debug      = flag.Bool("debug", false, "Set process to debug")
+	configFile = flag.String("config", "config.json", "Specify the location of the config file.")
+	appConfig  Config
 )
 
 // Check Error function for universal error handling
@@ -72,25 +70,17 @@ func main() {
 	}
 	WORKDIR = filepath.Dir(ex)
 
-	// Create or open log directory
-	f, err := os.OpenFile(WORKDIR+`/server.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		l(err.Error(), true, true)
-	}
-	defer f.Close()
-	log.SetOutput(f)
-
 	// Load config file
-	configFile, err := ioutil.ReadFile(WORKDIR + "/config.json")
+	f, err := ioutil.ReadFile(WORKDIR + *configFile)
 	checkErr("Reading Config file error", err)
-	err = json.Unmarshal(configFile, &appConfig)
+	err = json.Unmarshal(f, &appConfig)
 	checkErr("Pasring config file error", err)
 
 	// Start application in requested mode
-	if strings.ToLower(*flagMode) == "server" {
-		startServerMode(&server, flagTLS)
-	} else if strings.ToLower(*flagMode) == "client" {
-		startClientMode(flagTLS)
+	if len(appConfig.Server.Port) > 0 {
+		startServerMode()
+	} else if len(appConfig.Client.Port) > 0 {
+		startClientMode()
 	} else {
 		fmt.Println("Mode is unknown!")
 	}

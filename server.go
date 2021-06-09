@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
+	"log"
 	"net"
+	"os"
 	"time"
 )
 
@@ -93,10 +95,17 @@ func (server *Server) send(client *Client) {
 The function creates a TLS or unenctypted socket based on the configuraiton. Then starts listening on the specified port for incoming TCP requests.
 If a TCP connection is esablished, the connection will be registered as aclient then the server starts a go routine for receiving data from and for sending data to the client.
 */
-func startServerMode(server *Server, ecrypt *bool) {
+func startServerMode() {
+	// Create or open log directory
+	f, err := os.OpenFile(WORKDIR+`/server.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		l(err.Error(), true, true)
+	}
+	defer f.Close()
+	log.SetOutput(f)
 	l("Starting server...", false, true)
 	var listener net.Listener
-	if *ecrypt {
+	if appConfig.Tls {
 		cert, err := tls.LoadX509KeyPair(WORKDIR+"/cert.pem", WORKDIR+"/key.pem")
 		checkErr("Importing TLS certificates error", err)
 		config := tls.Config{Certificates: []tls.Certificate{cert}}
@@ -111,7 +120,9 @@ func startServerMode(server *Server, ecrypt *bool) {
 		checkErr("Creating NET listener error", err)
 	}
 	go server.start()
-	go startHttpServer()
+	if len(appConfig.Api.Port) > 0 {
+		go startHttpServer()
+	}
 	for {
 		connection, err := listener.Accept()
 		checkErr("Accepting connection error", err)
