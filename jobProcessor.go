@@ -32,9 +32,9 @@ func (job *Job) new() {
 	job.send()
 }
 
-func (job *Job) done() {
-	l("["+job.ID+"] Job has been completed in "+time.Since(time.Unix(0, job.Started)).String(), false, true)
-	delete(jobs, job.ID)
+func (job *Job) send() {
+	jobs[job.ID] = *job
+	job.Client.data <- *job
 }
 
 func (job *Job) acknowledge() {
@@ -42,9 +42,9 @@ func (job *Job) acknowledge() {
 	job.send()
 }
 
-func (job *Job) send() {
-	jobs[job.ID] = *job
-	job.Client.data <- *job
+func (job *Job) done() {
+	l("["+job.ID+"] Job has been completed in "+time.Since(time.Unix(0, job.Started)).String(), false, true)
+	delete(jobs, job.ID)
 }
 
 var jobs = make(map[string]Job)
@@ -54,22 +54,24 @@ func handleJob(job Job, client *Client) {
 	if len(jobs[job.ID].Command) == 0 {
 		l("["+job.ID+"] New job: "+job.Command, false, false)
 	}
+	job.Client = client
 	jobs[job.ID] = job
-	if len(job.Command) > 0 {
+	if job.Status == "acknowledged" {
+		l("["+job.ID+"] Has been acknowledged by server", false, true)
+	} else if len(job.Command) > 0 {
 		// Handle different commands by calling a function
 		switch job.Command {
 		case "ping":
-			pong(job.ID, client)
+			pong(job.ID)
 		// If command is not found an error message will be sent back to the sender
 		default:
-			unknownCommand(job, client)
+			unknownCommand(job.ID)
 		}
 	}
 }
 
-func pong(id string, client *Client) {
+func pong(id string) {
 	job := jobs[id]
-	job.Client = client
 	if job.Status == "completed" {
 		l("["+job.ID+"] "+job.Message, false, true)
 		job.done()
@@ -78,15 +80,18 @@ func pong(id string, client *Client) {
 		job.Status = "completed"
 		job.send()
 		job.done()
-	} else if job.Status == "acknowledged" {
-		l("["+job.ID+"] Has been acknowledged by server", false, true)
 	}
 }
 
-func unknownCommand(job Job, client *Client) {
-	err := Job{Message: "Unknown Command", Status: "ERROR", ID: job.ID}
-	client.data <- err
-	delete(jobs, job.ID)
+func unknownCommand(id string) {
+	job := jobs[id]
+	l("["+job.ID+"] Unknown Command '"+job.Command+"'", false, true)
+	if job.Status != "ERROR" {
+		job.Message = "Unknown Command"
+		job.Status = "ERROR"
+		job.send()
+	}
+	job.done()
 }
 
 func listJobs() {
