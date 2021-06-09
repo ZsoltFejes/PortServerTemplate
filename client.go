@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 )
 
 // TODO Rework latency and outgoing requests to be handeled per job, so outgoung requests will be part of the jpb processor
@@ -29,9 +28,22 @@ func (client *Client) receive() {
 			client.socket.Close()
 			break
 		}
-		client.comandSent <- false
 		go handleJob(job, client)
 		job.reset()
+	}
+}
+
+func (client *Client) send() {
+	defer client.socket.Close()
+	encoder := json.NewEncoder(client.socket)
+	for {
+		select {
+		case job, ok := <-client.data:
+			if !ok {
+				return
+			}
+			encoder.Encode(job)
+		}
 	}
 }
 
@@ -45,7 +57,9 @@ func startClientMode() {
 
 	log.SetOutput(f)
 	l("Starting client...", false, true)
-	client := &Client{comandSent: make(chan bool)}
+	client := &Client{
+		comandSent: make(chan bool),
+		data:       make(chan Job)}
 	if appConfig.Tls {
 		// For Testing certificate verification is disabled
 		config := tls.Config{InsecureSkipVerify: true}
@@ -58,45 +72,17 @@ func startClientMode() {
 		client.socket = connection
 	}
 	l("Client Connected", false, true)
-	go client.latency() // Latency is added for testing
 	go client.receive()
-	encoder := json.NewEncoder(client.socket)
+	go client.send()
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		input, _ := reader.ReadString('\n')
 		args := strings.Fields(input)
 		if len(args) > 0 {
-			command := Job{Command: args[0], ID: getID()}
-			err := encoder.Encode(command)
-			if err != nil {
-				l("Encoding Error: "+err.Error(), false, false)
-				client.socket.Close()
-				break
-			}
-			client.comandSent <- true
+			job := Job{Command: args[0], Args: args[1:], Client: client}
+			job.new()
 		} else {
 			l("Type a command", false, true)
-		}
-	}
-}
-
-// This feature will be part of job processor instead of the client
-func (client *Client) latency() {
-	var now time.Time
-	waiting := false
-	for {
-		select {
-		case commandSent := <-client.comandSent:
-			if commandSent {
-				now = time.Now()
-				if waiting {
-					l("Application was waiting for an answer from the server", false, true)
-				}
-				waiting = true
-			} else {
-				waiting = false
-				l(time.Since(now).String(), false, true)
-			}
 		}
 	}
 }

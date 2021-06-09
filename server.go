@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/rand"
 	"crypto/tls"
-	"encoding/json"
 	"log"
 	"net"
 	"os"
@@ -51,46 +50,6 @@ func (server *Server) start() {
 	}
 }
 
-/*For each client a receive routine is started. It handles jobs sent from that client.
-
-Only Job objects sent as JSON are accepted across the socket
-*/
-func (server *Server) receive(client *Client) {
-	decoder := json.NewDecoder(client.socket)
-	var job Job
-	for {
-		err := decoder.Decode(&job)
-		if err != nil {
-			l(err.Error(), false, false)
-			server.unregister <- client
-			client.socket.Close()
-			break
-		}
-		go handleJob(job, client)
-		job.reset()
-	}
-}
-
-/*For each client a send routine is started.
-
-Job objects sent on the client's data channel will be sent to the clinet.
-
-Only Job objects can be sent on the socket.
-*/
-func (server *Server) send(client *Client) {
-	defer client.socket.Close()
-	encoder := json.NewEncoder(client.socket)
-	for {
-		select {
-		case job, ok := <-client.data:
-			if !ok {
-				return
-			}
-			encoder.Encode(job)
-		}
-	}
-}
-
 /* Starts server specific goroutines.
 The function creates a TLS or unenctypted socket based on the configuraiton. Then starts listening on the specified port for incoming TCP requests.
 If a TCP connection is esablished, the connection will be registered as aclient then the server starts a go routine for receiving data from and for sending data to the client.
@@ -128,7 +87,7 @@ func startServerMode() {
 		checkErr("Accepting connection error", err)
 		client := &Client{socket: connection, data: make(chan Job)}
 		server.register <- client
-		go server.receive(client)
-		go server.send(client)
+		go client.receive()
+		go client.send()
 	}
 }

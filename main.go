@@ -72,7 +72,7 @@ func main() {
 
 	// Load config file
 	f, err := ioutil.ReadFile(WORKDIR + *configFile)
-	checkErr("Reading Config file error", err)
+	checkErr("Reading config file error", err)
 	err = json.Unmarshal(f, &appConfig)
 	checkErr("Pasring config file error", err)
 
