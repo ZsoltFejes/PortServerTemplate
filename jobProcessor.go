@@ -73,7 +73,7 @@ func handleJob(job Job, client *Client) {
 func pong(id string) {
 	job := jobs[id]
 	if job.Status == "completed" {
-		l("["+job.ID+"] "+job.Message, false, true)
+		l("["+job.ID+"] Reply: "+job.Message, false, true)
 		job.done()
 	} else if job.Status == "new" {
 		job.Message = "pong"
