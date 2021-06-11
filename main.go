@@ -32,9 +32,14 @@ var (
 )
 
 // Check Error function for universal error handling
-func checkErr(message string, err error) {
+func checkErr(message string, err error, showError bool) {
 	if err != nil {
-		l(message+"- "+err.Error(), true, true)
+		if showError {
+			l(message+"- "+err.Error(), true, showError)
+		} else {
+			l(message, false, !showError)            // Show error without the error
+			l("ERROR "+err.Error(), true, showError) // Log error with the error
+		}
 	}
 }
 
@@ -72,9 +77,9 @@ func main() {
 
 	// Load config file
 	f, err := ioutil.ReadFile(WORKDIR + *configFile)
-	checkErr("Reading config file error", err)
+	checkErr("Unable to read configuration file, check the path to the file", err, false)
 	err = json.Unmarshal(f, &appConfig)
-	checkErr("Pasring config file error", err)
+	checkErr("Unable to load config file. Please check the documentation", err, false)
 
 	// Start application in requested mode
 	if len(appConfig.Server.Port) > 0 {

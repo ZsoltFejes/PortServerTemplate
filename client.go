@@ -64,11 +64,11 @@ func startClientMode() {
 		// For Testing certificate verification is disabled
 		config := tls.Config{InsecureSkipVerify: true}
 		connection, err := tls.Dial("tcp", appConfig.Api.Address+":"+appConfig.Client.Port, &config)
-		checkErr("Connecting to server with TLS error", err)
+		checkErr("Unable to connect to server with TLS", err, false)
 		client.socket = connection
 	} else {
 		connection, err := net.Dial("tcp", appConfig.Api.Address+":"+appConfig.Client.Port)
-		checkErr("Connecting to server error", err)
+		checkErr("Unable to connect to server", err, false)
 		client.socket = connection
 	}
 	l("Client Connected", false, true)

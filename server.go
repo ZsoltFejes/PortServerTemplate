@@ -107,17 +107,17 @@ func startServerMode() {
 	var listener net.Listener
 	if appConfig.Tls {
 		cert, err := tls.LoadX509KeyPair(WORKDIR+"/cert.pem", WORKDIR+"/key.pem")
-		checkErr("Importing TLS certificates error", err)
+		checkErr("Unable to import TLS certificates", err, true)
 		config := tls.Config{Certificates: []tls.Certificate{cert}}
 		now := time.Now()
 		config.Time = func() time.Time { return now }
 		config.Rand = rand.Reader
 		listener, err = tls.Listen("tcp", appConfig.Server.Address+":"+appConfig.Server.Port, &config)
-		checkErr("Creating TLS listener error", err)
+		checkErr("Unable to create TLS listener", err, false)
 	} else {
 		var err error
 		listener, err = net.Listen("tcp", appConfig.Server.Address+":"+appConfig.Server.Port)
-		checkErr("Creating NET listener error", err)
+		checkErr("Unable to create listener", err, true)
 	}
 	go server.start()
 	if len(appConfig.Api.Port) > 0 {
@@ -125,7 +125,7 @@ func startServerMode() {
 	}
 	for {
 		connection, err := listener.Accept()
-		checkErr("Accepting connection error", err)
+		checkErr("Unable to accept incoming connection", err, true)
 		client := &Client{socket: connection, data: make(chan Job)}
 		server.register <- client
 		go server.receive(client)
